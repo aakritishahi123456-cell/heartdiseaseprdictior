@@ -1,160 +1,134 @@
 import streamlit as st
 import joblib
 import pandas as pd
-import numpy as np
 from pathlib import Path
 
-# -----------------------------
-# Page config
-# -----------------------------
+# ---------- Page Config ----------
 st.set_page_config(
-    page_title="Heart Disease Risk Predictor",
+    page_title="Heart Disease Risk Stratification",
     page_icon="❤️",
     layout="centered"
 )
 
-# -----------------------------
-# Constants
-# -----------------------------
+# ---------- Constants ----------
 THRESHOLD = 0.4
 MODEL_PATH = Path(__file__).resolve().parent.parent / "models" / "heart_model.pkl"
 
-# -----------------------------
-# Load model
-# -----------------------------
+# ---------- Load Model ----------
 @st.cache_resource
 def load_model():
     return joblib.load(MODEL_PATH)
 
 model = load_model()
 
-# -----------------------------
-# Title and description
-# -----------------------------
-st.title("❤️ Heart Disease Risk Predictor")
+# ---------- Label Mappings ----------
+cp_map = {
+    "Typical Angina": 0,
+    "Atypical Angina": 1,
+    "Non-anginal Pain": 2,
+    "Asymptomatic": 3
+}
+
+restecg_map = {
+    "Normal": 0,
+    "ST-T Wave Abnormality": 1,
+    "Left Ventricular Hypertrophy": 2
+}
+
+slope_map = {
+    "Upsloping": 0,
+    "Flat": 1,
+    "Downsloping": 2
+}
+
+thal_map = {
+    "Normal": 1,
+    "Fixed Defect": 2,
+    "Reversible Defect": 3
+}
+
+# ---------- Header ----------
+st.title("❤️ Heart Disease Risk Stratification System")
 st.markdown(
     """
-This app predicts whether a patient is at **high risk** or **low risk** of heart disease
+This tool predicts whether a patient is at **high** or **low** risk of heart disease
 using a trained **Logistic Regression** model.
 
-**Model details**
-- Final model: Logistic Regression
-- Operational threshold: 0.4
-- Output: predicted risk class + probability score
-
-**Important**
-This tool is for **educational and portfolio purposes only**.  
-It is **not a medical diagnosis system** and must not be used for real clinical decisions.
+**Important:** This is an educational machine learning project and **not** a clinical diagnosis tool.
 """
 )
 
-st.divider()
+# ---------- Sidebar ----------
+st.sidebar.header("Model Info")
+st.sidebar.write("**Final Model:** Logistic Regression")
+st.sidebar.write(f"**Threshold:** {THRESHOLD}")
+st.sidebar.write("**Dataset:** UCI Heart Disease")
+st.sidebar.info("Threshold 0.4 was selected to improve recall for screening-style use.")
 
-# -----------------------------
-# Sidebar info
-# -----------------------------
-st.sidebar.header("About")
-st.sidebar.write("Model: Logistic Regression")
-st.sidebar.write(f"Threshold: {THRESHOLD}")
-st.sidebar.write("Dataset: UCI Heart Disease")
-st.sidebar.info(
-    "Lower threshold improves recall, which is useful in screening-style medical tasks."
-)
-
-# -----------------------------
-# User inputs
-# -----------------------------
-st.subheader("Enter Patient Information")
+# ---------- Patient Inputs ----------
+st.subheader("Patient Inputs")
 
 col1, col2 = st.columns(2)
 
 with col1:
-    age = st.slider("Age", min_value=20, max_value=100, value=54)
-    sex = st.selectbox("Sex", options=[0, 1], format_func=lambda x: "Female" if x == 0 else "Male")
-    cp = st.selectbox(
-        "Chest Pain Type (cp)",
-        options=[0, 1, 2, 3],
-        help="Encoded category from dataset"
-    )
-    trestbps = st.slider("Resting Blood Pressure (trestbps)", min_value=80, max_value=220, value=130)
-    chol = st.slider("Cholesterol (chol)", min_value=100, max_value=600, value=240)
-    fbs = st.selectbox(
-        "Fasting Blood Sugar > 120 mg/dl (fbs)",
-        options=[0, 1],
-        format_func=lambda x: "No" if x == 0 else "Yes"
-    )
-    restecg = st.selectbox(
-        "Resting ECG Results (restecg)",
-        options=[0, 1, 2]
-    )
+    age = st.slider("Age", 20, 100, 54)
+    sex = st.selectbox("Sex", ["Female", "Male"])
+    cp = st.selectbox("Chest Pain Type", list(cp_map.keys()))
+    trestbps = st.slider("Resting Blood Pressure", 80, 220, 130)
+    chol = st.slider("Cholesterol", 100, 600, 240)
+    fbs = st.selectbox("Fasting Blood Sugar > 120 mg/dl", ["No", "Yes"])
+    restecg = st.selectbox("Resting ECG Result", list(restecg_map.keys()))
 
 with col2:
-    thalach = st.slider("Max Heart Rate Achieved (thalach)", min_value=60, max_value=220, value=150)
-    exang = st.selectbox(
-        "Exercise Induced Angina (exang)",
-        options=[0, 1],
-        format_func=lambda x: "No" if x == 0 else "Yes"
-    )
-    oldpeak = st.slider("Oldpeak", min_value=0.0, max_value=7.0, value=1.0, step=0.1)
-    slope = st.selectbox("Slope", options=[0, 1, 2])
-    ca = st.selectbox("Number of Major Vessels (ca)", options=[0, 1, 2, 3, 4])
-    thal = st.selectbox("Thal", options=[0, 1, 2, 3])
+    thalach = st.slider("Maximum Heart Rate Achieved", 60, 220, 150)
+    exang = st.selectbox("Exercise-Induced Angina", ["No", "Yes"])
+    oldpeak = st.slider("Oldpeak (ST Depression)", 0.0, 7.0, 1.0, 0.1)
+    slope = st.selectbox("ST Segment Slope", list(slope_map.keys()))
+    ca = st.selectbox("Number of Major Vessels (0-4)", [0, 1, 2, 3, 4])
+    thal = st.selectbox("Thalassemia Result", list(thal_map.keys()))
 
-# -----------------------------
-# Build input dataframe
-# -----------------------------
+# ---------- Build Input DataFrame ----------
 input_data = pd.DataFrame([{
     "age": age,
-    "sex": sex,
-    "cp": cp,
+    "sex": 1 if sex == "Male" else 0,
+    "cp": cp_map[cp],
     "trestbps": trestbps,
     "chol": chol,
-    "fbs": fbs,
-    "restecg": restecg,
+    "fbs": 1 if fbs == "Yes" else 0,
+    "restecg": restecg_map[restecg],
     "thalach": thalach,
-    "exang": exang,
+    "exang": 1 if exang == "Yes" else 0,
     "oldpeak": oldpeak,
-    "slope": slope,
+    "slope": slope_map[slope],
     "ca": ca,
-    "thal": thal
+    "thal": thal_map[thal]
 }])
 
-st.divider()
-
-# -----------------------------
-# Prediction
-# -----------------------------
-if st.button("Predict Risk", use_container_width=True):
+# ---------- Prediction ----------
+if st.button("🔍 Predict Risk", use_container_width=True):
     probability = model.predict_proba(input_data)[0][1]
     prediction = int(probability >= THRESHOLD)
 
     st.subheader("Prediction Result")
 
     if prediction == 1:
-        st.error("Predicted Risk: HIGH")
+        st.error("⚠️ Predicted Risk: **HIGH**")
     else:
-        st.success("Predicted Risk: LOW")
+        st.success("✅ Predicted Risk: **LOW**")
 
-    st.write(f"**Predicted probability of heart disease:** `{probability:.3f}`")
-    st.write(f"**Decision threshold used:** `{THRESHOLD}`")
+    st.metric("Predicted Probability", f"{probability:.2%}")
+    st.progress(min(int(probability * 100), 100))
 
-    # Confidence-style interpretation
     if probability >= 0.75:
-        st.write("Interpretation: strong positive risk signal.")
+        st.write("**Interpretation:** Strong positive risk signal. Further clinical evaluation recommended.")
     elif probability >= THRESHOLD:
-        st.write("Interpretation: moderate positive risk signal.")
+        st.write("**Interpretation:** Moderate positive risk signal. Consider follow-up testing.")
     else:
-        st.write("Interpretation: below the selected operational threshold.")
+        st.write("**Interpretation:** Below the selected operational threshold. Low risk indicated.")
 
-    # Show raw input
-    with st.expander("See input data"):
+    with st.expander("📋 View Model Input Data"):
         st.dataframe(input_data, use_container_width=True)
 
-st.divider()
-
-# -----------------------------
-# Footer
-# -----------------------------
-st.caption(
-    "Educational ML project • Heart Disease Risk Prediction • Built with Streamlit and scikit-learn"
-)
+# ---------- Footer ----------
+st.markdown("---")
+st.caption("Educational ML project • Not for real clinical decision-making • UCI Heart Disease Dataset")
