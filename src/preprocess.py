@@ -58,7 +58,7 @@ def split_data(df, test_size=0.2, random_state=42):
 
 
 if __name__ == "__main__":
-    from data_loader import load_data, clean_data
+    from src.data_loader import load_data, clean_data
 
     df = clean_data(load_data())
     X_train, X_test, y_train, y_test = split_data(df)

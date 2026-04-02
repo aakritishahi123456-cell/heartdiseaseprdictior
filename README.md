@@ -165,6 +165,61 @@ An interactive UI for real-time prediction.
 
 ---
 
+## ☁️ Supabase Setup
+
+This project can save prediction records to Supabase through the implementation in `src/supabase_client.py`.
+
+### 1. Create a Supabase project
+
+1. Create a new project in Supabase.
+2. Copy the project URL and `anon` key from the Supabase dashboard.
+3. Set them as environment variables before starting Streamlit.
+
+### 2. Set PowerShell environment variables
+
+Use these commands in the current PowerShell session:
+
+```powershell
+$env:SUPABASE_URL = "https://YOUR-PROJECT-REF.supabase.co"
+$env:SUPABASE_KEY = "YOUR-ANON-KEY"
+```
+
+If these variables are not set, the app still works locally, but prediction records will not be saved.
+
+### 3. Create the `public.predictions` table
+
+Run this SQL in the Supabase SQL editor:
+
+```sql
+create extension if not exists pgcrypto;
+
+create table if not exists public.predictions (
+  id uuid primary key default gen_random_uuid(),
+  created_at timestamptz not null default now(),
+  age integer,
+  sex integer,
+  cp integer,
+  trestbps integer,
+  chol integer,
+  fbs integer,
+  restecg integer,
+  thalach integer,
+  exang integer,
+  oldpeak double precision,
+  slope integer,
+  ca integer,
+  thal integer,
+  threshold double precision,
+  probability double precision,
+  prediction integer,
+  risk_label text
+);
+```
+
+The app inserts one row per prediction into `public.predictions`. The columns above match the payload built in `src/supabase_client.py`.
+
+---
+
 ## 📸 Screenshots
 
 > Add these after running the app

@@ -3,8 +3,9 @@ data_loader.py
 Loads the UCI Heart Disease dataset and performs initial cleaning.
 """
 
-import pandas as pd
 from pathlib import Path
+
+import pandas as pd
 
 
 def load_data(path=None):
@@ -20,7 +21,7 @@ def clean_data(df):
     original_size = len(df)
     df_clean = df.drop_duplicates().reset_index(drop=True)
     removed = original_size - len(df_clean)
-    print(f"Removed {removed} duplicate rows ({original_size} → {len(df_clean)})")
+    print(f"Removed {removed} duplicate rows ({original_size} -> {len(df_clean)})")
     return df_clean
 
 
